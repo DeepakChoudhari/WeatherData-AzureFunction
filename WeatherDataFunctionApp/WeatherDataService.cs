@@ -1,37 +1,42 @@
-using System;
-using System.Net;
-using System.Net.Http;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
-
 namespace WeatherDataFunctionApp
 {
+    using System;
+    using System.Net;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+    using Microsoft.Azure.WebJobs;
+    using Microsoft.Azure.WebJobs.Extensions.Http;
+    using Microsoft.Azure.WebJobs.Host;
+
     public static class WeatherDataService
     {
+        private static readonly HttpClient WeatherDataHttpClient = new HttpClient();
+
+        private static readonly string ApiUrl; 
+
+        static WeatherDataService()
+        {
+            string apiKey = System.Configuration.ConfigurationManager.AppSettings["ApiKey"];
+            ApiUrl = $"https://api.apixu.com/v1/current.json?key={apiKey}&q={{0}}";
+        }
+
         [FunctionName("WeatherDataService")]
-        public static HttpResponseMessage Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequestMessage req, TraceWriter log)
+        public static async Task<HttpResponseMessage> RunAsync([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "WeatherDataService/Current/{location}")]HttpRequestMessage req, string location, TraceWriter log)
         {
             log.Info("C# HTTP trigger function processed a request.");
 
-            return req.CreateResponse(HttpStatusCode.OK, DateTime.Now.ToString());
+            HttpResponseMessage responseMessage = await GetCurrentWeatherDataForLocation(location);
 
-            /*
-            // parse query parameter
-            string name = req.GetQueryNameValuePairs()
-                .FirstOrDefault(q => string.Compare(q.Key, "name", true) == 0)
-                .Value;
+            if (responseMessage.IsSuccessStatusCode)
+                return req.CreateResponse(HttpStatusCode.OK, responseMessage.Content.ReadAsAsync(typeof(object)).Result);
 
-            // Get request body
-            dynamic data = await req.Content.ReadAsAsync<object>();
+            log.Error($"Error occurred while trying to retrieve weather data for {req.Content.ReadAsStringAsync().Result}");
+            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal Server Error.");
+        }
 
-            // Set name to query string or body data
-            name = name ?? data?.name;
-
-            return name == null
-                ? req.CreateResponse(HttpStatusCode.BadRequest, "Please pass a name on the query string or in the request body")
-                : req.CreateResponse(HttpStatusCode.OK, "Hello " + name);
-            */
+        private static async Task<HttpResponseMessage> GetCurrentWeatherDataForLocation(string location)
+        {
+            return await WeatherDataHttpClient.GetAsync(String.Format(ApiUrl, location));
         }
     }
 }

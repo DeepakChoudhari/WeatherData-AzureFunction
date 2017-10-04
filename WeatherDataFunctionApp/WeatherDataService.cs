@@ -29,12 +29,17 @@ namespace WeatherDataFunctionApp
             var queryNameValuePairs = req.GetQueryNameValuePairs();
             var location = queryNameValuePairs.Where(pair => pair.Key.Equals("location", StringComparison.InvariantCultureIgnoreCase)).Select(queryParam => queryParam.Value).FirstOrDefault();
 
-            HttpResponseMessage responseMessage = await GetCurrentWeatherDataForLocation(location);
+            if (location == null)
+            {
+                log.Error("location query string parameter was missing.");
+                return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Query string parameter/value for 'location' was missing");
+            }
 
+            HttpResponseMessage responseMessage = await GetCurrentWeatherDataForLocation(location);
             if (responseMessage.IsSuccessStatusCode)
                 return req.CreateResponse(HttpStatusCode.OK, responseMessage.Content.ReadAsAsync(typeof(object)).Result);
 
-            log.Error($"Error occurred while trying to retrieve weather data for {req.Content.ReadAsStringAsync().Result}");
+            log.Error($"Error occurred while trying to retrieve current weather data from api {ApiUrl}");
             return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal Server Error.");
         }
 

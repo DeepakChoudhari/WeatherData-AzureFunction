@@ -39,7 +39,7 @@ namespace WeatherDataFunctionApp
             if (responseMessage.IsSuccessStatusCode)
                 return req.CreateResponse(HttpStatusCode.OK, responseMessage.Content.ReadAsAsync(typeof(object)).Result);
 
-            log.Error($"Error occurred while trying to retrieve current weather data from api {ApiUrl}");
+            log.Error($"Error occurred while trying to retrieve current weather data from api {string.Format(ApiUrl, location)}");
             return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal Server Error.");
         }
 

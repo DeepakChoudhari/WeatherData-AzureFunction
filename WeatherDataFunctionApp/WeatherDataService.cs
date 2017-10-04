@@ -1,6 +1,7 @@
 namespace WeatherDataFunctionApp
 {
     using System;
+    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Threading.Tasks;
@@ -21,9 +22,12 @@ namespace WeatherDataFunctionApp
         }
 
         [FunctionName("WeatherDataService")]
-        public static async Task<HttpResponseMessage> RunAsync([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "WeatherDataService/Current/{location}")]HttpRequestMessage req, string location, TraceWriter log)
+        public static async Task<HttpResponseMessage> RunAsync([HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]HttpRequestMessage req, TraceWriter log)
         {
             log.Info("C# HTTP trigger function processed a request.");
+
+            var queryNameValuePairs = req.GetQueryNameValuePairs();
+            var location = queryNameValuePairs.Where(pair => pair.Key.Equals("location", StringComparison.InvariantCultureIgnoreCase)).Select(queryParam => queryParam.Value).FirstOrDefault();
 
             HttpResponseMessage responseMessage = await GetCurrentWeatherDataForLocation(location);
 
